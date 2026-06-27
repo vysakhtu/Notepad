@@ -1,662 +1,743 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NovaNote - Distraction-Free Modern Notepad</title>
+  <title>Simple Note - Notepad</title>
   
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Google Fonts - Outfit -->
+  <!-- Google Fonts - Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Tailwind Configuration for customized theme and dark mode -->
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
-          colors: {
-            brand: {
-              50: '#f5f3ff',
-              100: '#ede9fe',
-              200: '#ddd6fe',
-              300: '#c4b5fd',
-              400: '#a78bfa',
-              500: '#8b5cf6',
-              600: '#7c3aed',
-              700: '#6d28d9',
-              800: '#5b21b6',
-              900: '#4c1d95',
-              950: '#2e1065',
-            }
-          },
           fontFamily: {
-            sans: ['Outfit', 'sans-serif'],
-          },
-          animation: {
-            'fade-in': 'fadeIn 0.25s ease-out forwards',
-            'slide-in': 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-          },
-          keyframes: {
-            fadeIn: {
-              '0%': { opacity: '0', transform: 'scale(0.97)' },
-              '100%': { opacity: '1', transform: 'scale(1)' },
-            },
-            slideIn: {
-              '0%': { transform: 'translateX(-100%)' },
-              '100%': { transform: 'translateX(0)' },
-            }
+            sans: ['Inter', 'sans-serif'],
           }
         }
       }
     }
   </script>
 
-  <style type="text/css">
-    /* Custom CSS adjustments for scrollbars & premium glassmorphism styling */
+  <style>
+    /* Custom scrollbars */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
-    
     ::-webkit-scrollbar-track {
       background: transparent;
     }
-    
-    .light ::webkit-scrollbar-thumb {
+    .light ::-webkit-scrollbar-thumb {
       background: #cbd5e1;
-      border-radius: 4px;
+      border-radius: 3px;
     }
-    
-    .dark ::webkit-scrollbar-thumb {
+    .dark ::-webkit-scrollbar-thumb {
       background: #334155;
-      border-radius: 4px;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
     
-    ::-webkit-scrollbar-thumb:hover {
-      background: #a78bfa;
-    }
-
-    /* Distraction-free content styling */
-    textarea::placeholder, input::placeholder {
-      font-weight: 300;
-      transition: color 0.2s ease;
-    }
-
-    /* Soft transition on theme switch */
     body {
-      transition: background-color 0.3s ease, color 0.3s ease;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    /* Core Mobile layout state switcher */
+    @media (max-width: 767px) {
+      body.show-editor #sidebar {
+        display: none !important;
+      }
+      body.show-editor #editor {
+        display: flex !important;
+        width: 100% !important;
+      }
+      body:not(.show-editor) #sidebar {
+        display: flex !important;
+        width: 100% !important;
+      }
+      body:not(.show-editor) #editor {
+        display: none !important;
+      }
     }
   </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans h-screen overflow-hidden flex flex-col md:flex-row relative">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans h-screen h-[100dvh] overflow-hidden flex relative">
 
-  <!-- Mobile Top Header Bar -->
-  <header class="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-20 w-full shrink-0">
-    <div class="flex items-center gap-3">
-      <button id="mobile-menu-btn" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors focus:outline-none" aria-label="Toggle Sidebar">
-        <i data-lucide="menu" class="w-6 h-6"></i>
-      </button>
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-md">
-          <i data-lucide="edit-3" class="w-4 h-4 text-white"></i>
-        </div>
-        <span class="font-bold text-lg bg-gradient-to-r from-brand-600 to-indigo-500 bg-clip-text text-transparent">NovaNote</span>
-      </div>
-    </div>
-    <div class="flex items-center gap-1">
-      <button id="mobile-new-note" class="p-2 text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/30 rounded-lg transition-colors focus:outline-none" aria-label="Create Note">
-        <i data-lucide="plus-circle" class="w-6 h-6"></i>
-      </button>
-    </div>
-  </header>
-
-  <!-- Sidebar Overlay (Mobile backdrop) -->
-  <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 hidden md:hidden transition-opacity duration-300 opacity-0"></div>
-
-  <!-- Sidebar Drawer Container -->
-  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-80 md:w-80 lg:w-90 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300 ease-in-out">
+  <!-- Sidebar (Left Column) -->
+  <aside id="sidebar" class="w-full md:w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full shrink-0">
     
     <!-- Sidebar Header -->
-    <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/20 dark:shadow-none">
-          <i data-lucide="edit-3" class="w-5 h-5 text-white"></i>
-        </div>
-        <div>
-          <span class="font-extrabold text-xl bg-gradient-to-r from-brand-600 to-indigo-500 bg-clip-text text-transparent">NovaNote</span>
-          <span class="block text-[10px] text-slate-400 dark:text-slate-500 font-medium tracking-widest uppercase">My Workspace</span>
-        </div>
+    <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i data-lucide="edit-3" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+        <span class="font-bold text-lg tracking-tight">Simple Note</span>
       </div>
-      
-      <!-- Theme Switcher Action Button -->
-      <button id="theme-toggle" class="p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 border border-slate-200 dark:border-slate-700 hover:border-brand-500 dark:hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400" aria-label="Toggle Theme">
+      <!-- Theme Switcher -->
+      <button id="theme-toggle" class="p-2.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Toggle Theme">
         <i data-lucide="sun" class="w-[18px] h-[18px] hidden dark:block"></i>
         <i data-lucide="moon" class="w-[18px] h-[18px] block dark:hidden"></i>
       </button>
     </div>
 
-    <!-- Toolbar / New Note / Search -->
-    <div class="p-4 space-y-3 border-b border-slate-100 dark:border-slate-800/60 shrink-0">
-      <button id="btn-new-note" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-medium hover:from-brand-500 hover:to-indigo-500 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20 dark:shadow-none border border-brand-500/10">
-        <i data-lucide="plus" class="w-5 h-5"></i>
+    <!-- Actions Area (New Note & Search) -->
+    <div class="p-4 space-y-3 border-b border-slate-100 dark:border-slate-800/60">
+      <button id="btn-new-note" class="w-full py-2.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors flex items-center justify-center gap-2 shadow-sm">
+        <i data-lucide="plus" class="w-4 h-4"></i>
         <span>New Note</span>
       </button>
       
-      <!-- Search Input Wrapper -->
+      <!-- Search Input -->
       <div class="relative">
-        <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500"></i>
+        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
         <input 
           type="text" 
           id="search-input" 
-          placeholder="Search note titles or content..." 
-          class="w-full pl-10 pr-9 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-brand-500 dark:focus:border-brand-400 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:focus:ring-brand-400/10 transition-all placeholder-slate-400 dark:placeholder-slate-600"
+          placeholder="Search note tags, titles..." 
+          class="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 dark:focus:border-indigo-400 rounded-lg text-sm focus:outline-none transition-colors"
         />
-        <!-- Clear search button -->
-        <button id="btn-clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hidden">
+        <button id="btn-clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden">
           <i data-lucide="x" class="w-3.5 h-3.5"></i>
         </button>
       </div>
     </div>
 
-    <!-- Notes List Section -->
+    <!-- Custom Category Folders Selector Bar -->
+    <div id="category-filters" class="px-4 py-2 flex gap-1.5 overflow-x-auto shrink-0 select-none border-b border-slate-100 dark:border-slate-800/40 bg-slate-50/50 dark:bg-slate-950/20 scrollbar-none">
+      <button data-filter="all" class="px-3 py-1 text-xs font-semibold rounded-full bg-indigo-600 text-white shadow-sm shrink-0 transition-all focus:outline-none">All</button>
+      <button data-filter="work" class="px-3 py-1 text-xs font-medium rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 shrink-0 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none">Work</button>
+      <button data-filter="personal" class="px-3 py-1 text-xs font-medium rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 shrink-0 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none">Personal</button>
+      <button data-filter="ideas" class="px-3 py-1 text-xs font-medium rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 shrink-0 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none">Ideas</button>
+      <button data-filter="todo" class="px-3 py-1 text-xs font-medium rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 shrink-0 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none">Todo</button>
+    </div>
+
+    <!-- Notes List container -->
     <div id="notes-list" class="flex-1 overflow-y-auto p-3 space-y-2">
-      <!-- Notes cards will be injected dynamically via JavaScript -->
+      <!-- Notes cards inject dynamically here -->
     </div>
   </aside>
 
-  <!-- Main Note Editor Workspace -->
-  <main class="flex-1 flex flex-col h-full bg-white dark:bg-slate-950 relative md:ml-0 overflow-hidden">
+  <!-- Editor Container (Right Column) -->
+  <main id="editor" class="flex-1 flex flex-col h-full bg-white dark:bg-slate-950 overflow-hidden">
     
-    <!-- Editor Header toolbar -->
-    <div id="editor-header" class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-950/50 backdrop-blur">
+    <!-- Editor Header Toolbar -->
+    <div class="px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50 backdrop-blur shrink-0 select-none">
       <div class="flex items-center gap-3">
-        <!-- Sidebar Toggle Indicator (Desktop mode sidebar toggler could go here, but this triggers hamburger on responsive) -->
-        <h2 id="current-editor-title" class="font-semibold text-slate-700 dark:text-slate-300 hidden md:block text-sm uppercase tracking-wider">Editor</h2>
+        <!-- Back Button (Visible only on mobile layout) -->
+        <button id="btn-back" class="md:hidden flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-medium py-1.5 pr-3 pl-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-colors">
+          <i data-lucide="chevron-left" class="w-5 h-5"></i>
+          <span>Notes</span>
+        </button>
+        <span id="editor-indicator" class="hidden md:inline text-xs font-semibold uppercase tracking-wider text-slate-400">Editor</span>
+
+        <!-- Markdown Mode Toggle Switcher -->
+        <div id="editor-mode-toggle" class="flex border border-slate-200 dark:border-slate-800 rounded-lg p-0.5 bg-slate-100 dark:bg-slate-900 shrink-0">
+          <button id="btn-mode-edit" class="px-3 py-1 text-xs font-semibold rounded-md bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm transition-all focus:outline-none">
+            Edit
+          </button>
+          <button id="btn-mode-preview" class="px-3 py-1 text-xs font-medium rounded-md text-slate-500 dark:text-slate-400 transition-all hover:text-slate-800 dark:hover:text-slate-200 focus:outline-none">
+            Preview
+          </button>
+        </div>
       </div>
 
       <!-- Action Options -->
-      <div class="flex items-center gap-2">
-        <button id="btn-export" class="flex items-center gap-1.5 px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 text-sm font-medium transition-colors bg-white dark:bg-slate-900 shadow-sm" title="Export current note to plain text file">
+      <div id="note-actions" class="flex items-center gap-1.5 md:gap-2">
+        <!-- Quick New Note button inside editor header (Only visible on mobile layout) -->
+        <button id="btn-mobile-new" class="md:hidden p-2 text-indigo-600 dark:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-colors" title="New Note">
+          <i data-lucide="plus" class="w-5 h-5"></i>
+        </button>
+        
+        <button id="btn-export" class="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 text-sm font-medium transition-colors bg-white dark:bg-slate-900" title="Export to TXT">
           <i data-lucide="download" class="w-4 h-4"></i>
           <span class="hidden sm:inline">Export</span>
         </button>
-        <button id="btn-delete" class="flex items-center gap-1.5 px-3 py-2 border border-rose-200 dark:border-rose-950/40 rounded-lg hover:border-rose-300 dark:hover:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-400 text-sm font-medium transition-colors bg-white dark:bg-slate-900 shadow-sm" title="Delete current note">
+        <button id="btn-delete" class="flex items-center gap-1.5 px-3 py-1.5 border border-rose-200 dark:border-rose-950/40 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-sm font-medium transition-colors bg-white dark:bg-slate-900" title="Delete Note">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
           <span class="hidden sm:inline">Delete</span>
         </button>
       </div>
     </div>
 
-    <!-- Active Note View Area -->
-    <div id="editor-container" class="flex-1 flex flex-col p-6 lg:p-10 overflow-y-auto space-y-6 animate-fade-in">
-      <!-- Title Input Field -->
+    <!-- Active Writing Workspace -->
+    <div id="editor-container" class="flex-1 flex flex-col p-5 md:p-8 space-y-4 overflow-y-auto">
+      
+      <!-- Metadata Row: Category select & Tags edit -->
+      <div class="flex flex-wrap items-center gap-4 text-sm pb-3 border-b border-slate-100 dark:border-slate-800/60 shrink-0 select-none">
+        <!-- Folder Category dropdown select -->
+        <div class="flex items-center gap-1.5">
+          <i data-lucide="folder" class="w-4 h-4 text-slate-400 dark:text-slate-500"></i>
+          <span class="text-slate-400 dark:text-slate-500 font-semibold text-[10px] uppercase tracking-wider">Category:</span>
+          <select id="note-category" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors font-medium cursor-pointer">
+            <option value="uncategorized">Uncategorized</option>
+            <option value="work">Work</option>
+            <option value="personal">Personal</option>
+            <option value="ideas">Ideas</option>
+            <option value="todo">Todo</option>
+          </select>
+        </div>
+        
+        <!-- Tag values input -->
+        <div class="flex items-center gap-1.5 flex-1 min-w-[160px]">
+          <i data-lucide="tag" class="w-4 h-4 text-slate-400 dark:text-slate-500"></i>
+          <span class="text-slate-400 dark:text-slate-500 font-semibold text-[10px] uppercase tracking-wider shrink-0">Tags:</span>
+          <input 
+            type="text" 
+            id="note-tags" 
+            placeholder="e.g. documentation, progress (comma separated)" 
+            class="flex-1 bg-transparent border-b border-dashed border-slate-200 dark:border-slate-800 focus:border-indigo-500 dark:focus:border-indigo-400 focus:outline-none text-xs py-1 transition-colors font-medium"
+          />
+        </div>
+      </div>
+
+      <!-- Title element -->
       <input 
         type="text" 
         id="note-title" 
-        placeholder="Give your note a title..." 
-        class="w-full text-3xl font-extrabold bg-transparent focus:outline-none border-none tracking-tight text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-800 caret-brand-500 focus:ring-0 p-0"
+        placeholder="Note Title" 
+        class="w-full text-2xl font-bold bg-transparent focus:outline-none border-none text-slate-900 dark:text-white caret-indigo-500 shrink-0"
       />
       
-      <!-- Body Textarea -->
+      <!-- Text Area Editor -->
       <textarea 
         id="note-body" 
-        placeholder="Start typing your thoughts here..." 
-        class="w-full flex-1 bg-transparent focus:outline-none border-none resize-none text-lg leading-relaxed text-slate-700 dark:text-slate-300 placeholder-slate-300 dark:placeholder-slate-800 caret-brand-500 focus:ring-0 p-0"
+        placeholder="Start writing your note here (Supports Markdown: # Header, **bold**, *italic*...)" 
+        class="w-full flex-1 bg-transparent focus:outline-none border-none resize-none text-base leading-relaxed text-slate-700 dark:text-slate-300 caret-indigo-500"
       ></textarea>
+      
+      <!-- Markdown Rendered Preview Pane -->
+      <div 
+        id="note-preview" 
+        class="hidden w-full flex-1 overflow-y-auto text-base leading-relaxed text-slate-700 dark:text-slate-350 select-text prose dark:prose-invert max-w-none"
+      ></div>
     </div>
 
-    <!-- Empty State View Area -->
-    <div id="empty-container" class="flex-1 hidden flex-col items-center justify-center p-8 text-center animate-fade-in">
-      <div class="w-20 h-20 rounded-3xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400 dark:text-slate-600 mb-6 shadow-inner">
-        <i data-lucide="edit-3" class="w-10 h-10 text-slate-300 dark:text-slate-700"></i>
+    <!-- Empty State View -->
+    <div id="empty-container" class="flex-1 hidden flex-col items-center justify-center p-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400 mb-4">
+        <i data-lucide="sticky-note" class="w-8 h-8"></i>
       </div>
-      <h3 class="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">No Active Note Selected</h3>
-      <p class="text-slate-500 dark:text-slate-500 max-w-sm text-sm mb-6 leading-relaxed">
-        Choose a note from the workspace sidebar list or create a fresh one to start capturing your ideas.
-      </p>
-      <button id="btn-empty-new-note" class="py-2.5 px-5 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl transition-all hover:scale-[1.02] shadow-lg shadow-brand-500/10 flex items-center gap-2">
-        <i data-lucide="plus" class="w-4 h-4"></i>
-        <span>Create a note</span>
-      </button>
+      <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-1">No Note Selected</h3>
+      <p class="text-sm text-slate-500 max-w-xs mb-4">Select a note from the list, or create a new note to start editing.</p>
+      <div class="flex items-center gap-2">
+        <button id="btn-empty-new-note" class="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors">
+          Create Note
+        </button>
+        <!-- Mobile browse trigger -->
+        <button id="btn-empty-browse" class="md:hidden py-2 px-4 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium rounded-lg transition-colors">
+          Browse Notes
+        </button>
+      </div>
     </div>
 
     <!-- Status Bar Footer -->
-    <footer id="editor-footer" class="px-6 py-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-950/50 shrink-0">
-      <div class="flex items-center gap-6">
-        <span class="flex items-center gap-1.5">
-          <i data-lucide="text-cursor" class="w-3.5 h-3.5"></i>
-          Characters: <strong id="char-count" class="text-slate-700 dark:text-slate-300">0</strong>
-        </span>
-        <span class="flex items-center gap-1.5">
-          <i data-lucide="align-left" class="w-3.5 h-3.5"></i>
-          Words: <strong id="word-count" class="text-slate-700 dark:text-slate-300">0</strong>
-        </span>
+    <footer id="editor-footer" class="px-5 py-2.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50 dark:bg-slate-950/50 shrink-0">
+      <div class="flex items-center gap-4">
+        <span>Words: <strong id="word-count" class="text-slate-700 dark:text-slate-300">0</strong></span>
+        <span>Chars: <strong id="char-count" class="text-slate-700 dark:text-slate-300">0</strong></span>
       </div>
-      
       <div class="flex items-center gap-1.5">
         <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-        <span>Last saved:</span>
-        <strong id="modified-time" class="text-slate-700 dark:text-slate-300">Never</strong>
+        <span id="modified-time">Never</span>
       </div>
     </footer>
   </main>
 
-  <!-- Global Toast Notifications Container -->
-  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+  <!-- Toast Notification element -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none z-50 flex items-center gap-2">
+    <span id="toast-message">Notification</span>
+  </div>
 
-  <!-- Main Application Script -->
   <script>
-    // --- Initializing State Structure ---
-    const STATE_KEY = 'novanote_application_state';
-    const THEME_KEY = 'novanote_color_theme';
+    // LocalStorage Keys
+    const STATE_KEY = 'simplenote_state';
+    const THEME_KEY = 'simplenote_theme';
 
+    // Core app state
     let state = {
-      notes: [],       // Collection of notes: { id, title, body, updatedAt }
-      activeId: null,  // Current active note identification UUID
-      searchQuery: ''  // Global note search filtering input
+      notes: [],                  // Array of notes: { id, title, body, category, tags, updatedAt }
+      activeId: null,             // Active Note UUID
+      searchQuery: '',
+      activeCategoryFilter: 'all', // Active Folder filter ('all', 'work', 'personal', 'ideas', 'todo')
+      isMarkdownPreview: false    // Edit vs Preview state toggles
     };
 
-    // DOM Elements references
+    // DOM references
+    const sidebar = document.getElementById('sidebar');
+    const editor = document.getElementById('editor');
     const notesListContainer = document.getElementById('notes-list');
     const noteTitleInput = document.getElementById('note-title');
     const noteBodyTextarea = document.getElementById('note-body');
+    const notePreviewDiv = document.getElementById('note-preview');
+    const noteCategorySelect = document.getElementById('note-category');
+    const noteTagsInput = document.getElementById('note-tags');
+    
     const charCountElement = document.getElementById('char-count');
     const wordCountElement = document.getElementById('word-count');
     const modifiedTimeElement = document.getElementById('modified-time');
     const searchInput = document.getElementById('search-input');
     const btnClearSearch = document.getElementById('btn-clear-search');
+    const categoryFiltersRow = document.getElementById('category-filters');
     
     const editorContainer = document.getElementById('editor-container');
     const emptyContainer = document.getElementById('empty-container');
-    const editorHeader = document.getElementById('editor-header');
+    const noteActions = document.getElementById('note-actions');
     const editorFooter = document.getElementById('editor-footer');
+    
+    // Markdown Mode Toggles buttons
+    const btnModeEdit = document.getElementById('btn-mode-edit');
+    const btnModePreview = document.getElementById('btn-mode-preview');
 
-    // Sidebar selectors (Desktop & Mobile)
-    const sidebar = document.getElementById('sidebar');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-
-    // Toast manager
-    function showToast(message, type = 'success') {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-      
-      // Tailwind classes for Toast styles
-      toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm transform translate-y-4 opacity-0 transition-all duration-300 ease-out bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 pointer-events-auto select-none`;
-      
-      let icon = 'info';
-      let iconColor = 'text-indigo-500';
-      
-      if (type === 'success') {
-        icon = 'check-circle';
-        iconColor = 'text-emerald-500';
-      } else if (type === 'error') {
-        icon = 'alert-triangle';
-        iconColor = 'text-rose-500';
-      } else if (type === 'delete') {
-        icon = 'trash-2';
-        iconColor = 'text-rose-500';
+    // Category styling color definitions
+    const categoryColors = {
+      work: {
+        border: 'border-l-4 border-l-blue-500',
+        bg: 'hover:bg-blue-50/20 dark:hover:bg-blue-950/10'
+      },
+      personal: {
+        border: 'border-l-4 border-l-emerald-500',
+        bg: 'hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10'
+      },
+      ideas: {
+        border: 'border-l-4 border-l-purple-500',
+        bg: 'hover:bg-purple-50/20 dark:hover:bg-purple-950/10'
+      },
+      todo: {
+        border: 'border-l-4 border-l-amber-500',
+        bg: 'hover:bg-amber-50/20 dark:hover:bg-amber-950/10'
+      },
+      uncategorized: {
+        border: 'border-l-4 border-l-transparent',
+        bg: 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
       }
+    };
 
-      toast.innerHTML = `
-        <div class="${iconColor} flex-shrink-0">
-          <i data-lucide="${icon}" class="w-4.5 h-4.5"></i>
-        </div>
-        <p class="font-medium">${message}</p>
-      `;
-
-      container.appendChild(toast);
+    // Client side Markdown Parsing Parser Engine
+    function parseMarkdown(md) {
+      if (!md) return '<p class="text-slate-400 dark:text-slate-600 italic">Start typing markdown to preview...</p>';
       
-      // Initialize icons inside created toast
-      lucide.createIcons();
+      // Escape markup symbols to protect from basic code injections
+      let html = md
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 
-      // Trigger animations
-      setTimeout(() => {
-        toast.classList.remove('translate-y-4', 'opacity-0');
-      }, 10);
+      // Multiline Code Blocks: ```js ... ```
+      html = html.replace(/```([\s\S]*?)```/gm, function(match, code) {
+        return `<pre class="bg-slate-100 dark:bg-slate-900/80 p-3 rounded-lg overflow-x-auto text-xs font-mono my-4 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800">${code.trim()}</pre>`;
+      });
 
-      // Dismissal scheduling
-      setTimeout(() => {
-        toast.classList.add('translate-y-4', 'opacity-0');
-        setTimeout(() => {
-          toast.remove();
-        }, 300);
+      // Headers: #, ##, ###
+      html = html.replace(/^### (.*$)/gim, '<h3 class="text-base font-bold text-slate-800 dark:text-slate-100 mt-4 mb-1.5">$1</h3>');
+      html = html.replace(/^## (.*$)/gim, '<h2 class="text-lg font-bold text-slate-900 dark:text-white mt-5 mb-2 border-b border-slate-100 dark:border-slate-800/60 pb-1">$1</h2>');
+      html = html.replace(/^# (.*$)/gim, '<h1 class="text-xl font-extrabold text-slate-900 dark:text-white mt-6 mb-3 border-b border-slate-200 dark:border-slate-800 pb-1.5">$1</h1>');
+
+      // Blockquotes: > quote
+      html = html.replace(/^\>&nbsp;(.*$)/gim, '<blockquote class="border-l-4 border-indigo-500 pl-4 my-4 italic text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 py-1 pr-2 rounded-r">$1</blockquote>');
+      html = html.replace(/^\> (.*$)/gim, '<blockquote class="border-l-4 border-indigo-500 pl-4 my-4 italic text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 py-1 pr-2 rounded-r">$1</blockquote>');
+
+      // Horizontal lines
+      html = html.replace(/^---$/gim, '<hr class="my-6 border-slate-200 dark:border-slate-800" />');
+
+      // Bullet Lists
+      html = html.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="ml-5 list-disc mt-1 text-slate-700 dark:text-slate-350">$1</li>');
+
+      // Numbered Lists
+      html = html.replace(/^\s*\d+\.\s+(.*$)/gim, '<li class="ml-5 list-decimal mt-1 text-slate-700 dark:text-slate-350">$1</li>');
+
+      // Bold & Italics
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+      html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+
+      // Inline code snippets
+      html = html.replace(/`(.*?)`/g, '<code class="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-xs font-mono text-indigo-600 dark:text-indigo-400 font-semibold">$1</code>');
+
+      // Line break preservation
+      html = html.replace(/\n/g, '<br>');
+
+      return html;
+    }
+
+    // Toast Notification Manager
+    let toastTimeout;
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toast-message');
+      
+      toastMessage.textContent = message;
+      toast.classList.remove('translate-y-10', 'opacity-0');
+      
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
       }, 2500);
     }
 
-    // --- State Storage Syncer ---
-    function saveToLocalStorage() {
-      try {
-        localStorage.setItem(STATE_KEY, JSON.stringify({
-          notes: state.notes,
-          activeId: state.activeId
-        }));
-      } catch (e) {
-        console.error('Error synchronizing active state structure to LocalStorage:', e);
-        showToast('Storage capacity warning! Cloud sync unavailable.', 'error');
-      }
-    }
-
-    function loadFromLocalStorage() {
-      try {
-        const stored = localStorage.getItem(STATE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          state.notes = parsed.notes || [];
-          state.activeId = parsed.activeId || null;
-        }
-      } catch (e) {
-        console.error('Failed to query values from local store:', e);
-        state.notes = [];
-        state.activeId = null;
-      }
-    }
-
-    // --- UI Theme Controllers ---
+    // Theme Switch System
     function initTheme() {
       const savedTheme = localStorage.getItem(THEME_KEY);
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      
-      if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) {
         document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
       }
     }
 
+    // Toggle light and dark theme mode
     function toggleTheme() {
       const isDark = document.documentElement.classList.contains('dark');
       if (isDark) {
         document.documentElement.classList.remove('dark');
         localStorage.setItem(THEME_KEY, 'light');
-        showToast('Switched to Light Mode', 'success');
+        showToast('Theme switched to Light');
       } else {
         document.documentElement.classList.add('dark');
         localStorage.setItem(THEME_KEY, 'dark');
-        showToast('Switched to Dark Mode', 'success');
+        showToast('Theme switched to Dark');
       }
-      lucide.createIcons();
     }
 
-    // --- Time formatter helper ---
+    // Helper: Formatter for timestamps
     function formatTime(timestamp) {
       if (!timestamp) return 'Never';
       const date = new Date(timestamp);
+      return date.toLocaleDateString(undefined, { 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    }
+
+    // Helper: Generate body previews
+    function getSnippet(text) {
+      if (!text) return 'Empty note...';
+      const clean = text.replace(/\s+/g, ' ').trim();
+      return clean.length > 55 ? clean.substring(0, 55) + '...' : clean;
+    }
+
+    // Save notes to localStorage
+    function saveNotes() {
+      try {
+        localStorage.setItem(STATE_KEY, JSON.stringify({
+          notes: state.notes,
+          activeId: state.activeId
+        }));
+      } catch (err) {
+        console.warn('LocalStorage unavailable.', err);
+      }
+    }
+
+    // Load notes from localStorage
+    function loadNotes() {
+      try {
+        const saved = localStorage.getItem(STATE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          state.notes = parsed.notes || [];
+          state.activeId = parsed.activeId || null;
+        }
+      } catch (err) {
+        console.warn('Failed to load note database.', err);
+      }
+    }
+
+    // Responsive layout visibility triggers using show-editor body toggle state
+    function updateLayoutVisibility() {
+      if (state.activeId) {
+        document.body.classList.add('show-editor');
+      } else {
+        document.body.classList.remove('show-editor');
+      }
+    }
+
+    // Note Selection & Load Engine
+    function loadActiveNote() {
+      const note = state.notes.find(n => n.id === state.activeId);
       
-      const now = new Date();
-      const isToday = date.toDateString() === now.toDateString();
-      
-      const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-      
-      if (isToday) {
-        return `Today, ${timeStr}`;
+      if (note) {
+        editorContainer.classList.remove('hidden');
+        editorFooter.classList.remove('hidden');
+        noteActions.classList.remove('opacity-0', 'pointer-events-none');
+        emptyContainer.classList.add('hidden');
+
+        noteTitleInput.value = note.title || '';
+        noteBodyTextarea.value = note.body || '';
+        noteCategorySelect.value = note.category || 'uncategorized';
+        noteTagsInput.value = note.tags || '';
+        
+        // Reset view mode on note load
+        setEditorMode(false);
+        updateCounters();
+        modifiedTimeElement.textContent = formatTime(note.updatedAt);
+      } else {
+        editorContainer.classList.add('hidden');
+        editorFooter.classList.add('hidden');
+        noteActions.classList.add('opacity-0', 'pointer-events-none');
+        emptyContainer.classList.remove('hidden');
       }
       
-      return `${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${timeStr}`;
+      updateLayoutVisibility();
     }
 
-    // Short content snippet constructor
-    function getContentSnippet(bodyText, maxLength = 75) {
-      if (!bodyText) return 'No content inside...';
-      const cleanText = bodyText.replace(/\s+/g, ' ').trim();
-      if (cleanText.length <= maxLength) return cleanText;
-      return cleanText.substring(0, maxLength) + '...';
+    // Word and character count calculators
+    function updateCounters() {
+      const val = noteBodyTextarea.value || '';
+      charCountElement.textContent = val.length;
+      
+      const words = val.trim() === '' ? 0 : val.trim().split(/\s+/).length;
+      wordCountElement.textContent = words;
     }
 
-    // --- Core CRUD Note Actions ---
-    function createNewNote() {
-      const newId = 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      const newNoteObj = {
-        id: newId,
+    // Markdown Mode Toggler Handler
+    function setEditorMode(previewMode) {
+      state.isMarkdownPreview = previewMode;
+      
+      if (previewMode) {
+        // Toggle view containers
+        noteBodyTextarea.classList.add('hidden');
+        notePreviewDiv.classList.remove('hidden');
+        
+        // Compile markdown raw value into HTML
+        notePreviewDiv.innerHTML = parseMarkdown(noteBodyTextarea.value);
+        
+        // Render Lucide icons inside preview if any
+        lucide.createIcons();
+        
+        // Toggle buttons active classes
+        btnModePreview.className = "px-3 py-1 text-xs font-semibold rounded-md bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm transition-all focus:outline-none";
+        btnModeEdit.className = "px-3 py-1 text-xs font-medium rounded-md text-slate-500 dark:text-slate-400 transition-all hover:text-slate-800 dark:hover:text-slate-200 focus:outline-none";
+      } else {
+        // Toggle view containers
+        noteBodyTextarea.classList.remove('hidden');
+        notePreviewDiv.classList.add('hidden');
+        
+        // Toggle buttons active classes
+        btnModeEdit.className = "px-3 py-1 text-xs font-semibold rounded-md bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm transition-all focus:outline-none";
+        btnModePreview.className = "px-3 py-1 text-xs font-medium rounded-md text-slate-500 dark:text-slate-400 transition-all hover:text-slate-800 dark:hover:text-slate-200 focus:outline-none";
+      }
+    }
+
+    // CRUD: Create Note
+    function createNote() {
+      const newNote = {
+        id: 'note_' + Date.now(),
         title: '',
         body: '',
+        category: 'uncategorized',
+        tags: '',
         updatedAt: Date.now()
       };
-
-      state.notes.unshift(newNoteObj);
-      state.activeId = newId;
-
-      saveToLocalStorage();
+      
+      state.notes.unshift(newNote);
+      state.activeId = newNote.id;
+      
+      saveNotes();
       renderNotesList();
-      loadActiveNoteToEditor();
+      loadActiveNote();
       
-      // Auto focus note title input for prompt workflow
       noteTitleInput.focus();
-      
-      showToast('Created a new blank note');
-      
-      // Auto close sidebar drawer on mobile after creation
-      closeMobileSidebar();
+      showToast('Created new note');
     }
 
+    // CRUD: Delete Note
     function deleteNote(id, event) {
-      if (event) {
-        event.stopPropagation(); // Avoid triggering card select on delete click
-      }
-
-      const noteIndex = state.notes.findIndex(n => n.id === id);
-      if (noteIndex === -1) return;
-
-      const deletedTitle = state.notes[noteIndex].title || 'Untitled Note';
-      state.notes.splice(noteIndex, 1);
-
-      // Re-route active pointer if necessary
+      if (event) event.stopPropagation(); // Stop card selection
+      
+      const index = state.notes.findIndex(n => n.id === id);
+      if (index === -1) return;
+      
+      const title = state.notes[index].title || 'Untitled Note';
+      state.notes.splice(index, 1);
+      
       if (state.activeId === id) {
         state.activeId = state.notes.length > 0 ? state.notes[0].id : null;
       }
-
-      saveToLocalStorage();
+      
+      saveNotes();
       renderNotesList();
-      loadActiveNoteToEditor();
-
-      showToast(`Deleted "${deletedTitle}"`, 'delete');
+      loadActiveNote();
+      
+      showToast(`Deleted "${title}"`);
     }
 
+    // CRUD: Select note
     function selectNote(id) {
-      if (state.activeId === id) {
-        closeMobileSidebar();
-        return;
-      }
       state.activeId = id;
-      saveToLocalStorage();
+      saveNotes();
       renderNotesList();
-      loadActiveNoteToEditor();
-      closeMobileSidebar();
+      loadActiveNote();
     }
 
-    // --- Note Selection & Load Engine ---
-    function loadActiveNoteToEditor() {
-      const activeNote = state.notes.find(n => n.id === state.activeId);
+    // CRUD: Live input keypress saving triggers
+    function handleTypingInput() {
+      if (!state.activeId) return;
+      
+      const index = state.notes.findIndex(n => n.id === state.activeId);
+      if (index === -1) return;
+      
+      state.notes[index].title = noteTitleInput.value;
+      state.notes[index].body = noteBodyTextarea.value;
+      state.notes[index].updatedAt = Date.now();
+      
+      saveNotes();
+      updateCounters();
+      modifiedTimeElement.textContent = formatTime(state.notes[index].updatedAt);
+      
+      // Inline update sidebar list item to preserve cursor focus
+      updateSidebarCardPreview(state.notes[index]);
+    }
 
-      if (activeNote) {
-        // Toggle view containers
-        editorContainer.classList.remove('hidden');
-        editorHeader.classList.remove('hidden');
-        editorFooter.classList.remove('hidden');
-        emptyContainer.classList.add('hidden');
+    // Category / Metadata live update
+    function handleMetadataChange() {
+      if (!state.activeId) return;
+      
+      const index = state.notes.findIndex(n => n.id === state.activeId);
+      if (index === -1) return;
+      
+      state.notes[index].category = noteCategorySelect.value;
+      state.notes[index].tags = noteTagsInput.value;
+      state.notes[index].updatedAt = Date.now();
+      
+      saveNotes();
+      modifiedTimeElement.textContent = formatTime(state.notes[index].updatedAt);
+      
+      // Re-render notes list because category folder filters and card styling may change
+      renderNotesList();
+    }
 
-        // Populate fields
-        noteTitleInput.value = activeNote.title || '';
-        noteBodyTextarea.value = activeNote.body || '';
-
-        // Reset scroll position
-        editorContainer.scrollTop = 0;
-
-        // Perform measurements update
-        updateWordAndCharCount();
-        modifiedTimeElement.textContent = formatTime(activeNote.updatedAt);
-      } else {
-        // Setup empty layout values
-        editorContainer.classList.add('hidden');
-        editorHeader.classList.add('hidden');
-        editorFooter.classList.add('hidden');
-        emptyContainer.classList.remove('hidden');
+    // Inline update card previews dynamically to avoid resetting element lists on keypress
+    function updateSidebarCardPreview(note) {
+      const card = document.querySelector(`[data-id="${note.id}"]`);
+      if (card) {
+        const titleEl = card.querySelector('.card-title');
+        const previewEl = card.querySelector('.card-preview');
+        const timeEl = card.querySelector('.card-time');
+        
+        if (titleEl) titleEl.textContent = note.title.trim() || 'Untitled Note';
+        if (previewEl) previewEl.textContent = getSnippet(note.body);
+        if (timeEl) timeEl.textContent = formatTime(note.updatedAt);
       }
     }
 
-    // --- Live Auto-Save Handlers ---
-    function handleEditorInput() {
+    // Export note contents as .txt file
+    function exportNote() {
       if (!state.activeId) return;
-
-      const activeNoteIndex = state.notes.findIndex(n => n.id === state.activeId);
-      if (activeNoteIndex === -1) return;
-
-      // Update source values in state
-      state.notes[activeNoteIndex].title = noteTitleInput.value;
-      state.notes[activeNoteIndex].body = noteBodyTextarea.value;
-      state.notes[activeNoteIndex].updatedAt = Date.now();
-
-      // Write straight to localStorage for instant backup
-      saveToLocalStorage();
-
-      // Update counters dynamically
-      updateWordAndCharCount();
-      modifiedTimeElement.textContent = formatTime(state.notes[activeNoteIndex].updatedAt);
-
-      // Inline update item preview values directly to prevent complete DOM rebuild (which breaks smooth focus & animation states)
-      const previewCard = document.querySelector(`[data-note-id="${state.activeId}"]`);
-      if (previewCard) {
-        const titleEl = previewCard.querySelector('.preview-title');
-        const snippetEl = previewCard.querySelector('.preview-snippet');
-        const timeEl = previewCard.querySelector('.preview-time');
-
-        if (titleEl) titleEl.textContent = noteTitleInput.value.trim() || 'Untitled Note';
-        if (snippetEl) snippetEl.textContent = getContentSnippet(noteBodyTextarea.value);
-        if (timeEl) timeEl.textContent = formatTime(state.notes[activeNoteIndex].updatedAt);
-      }
-    }
-
-    // --- Text Metric Calculators ---
-    function updateWordAndCharCount() {
-      const text = noteBodyTextarea.value || '';
-      const totalChars = text.length;
-
-      // Filter empty spaces to get accurate word representations
-      const totalWords = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-
-      charCountElement.textContent = totalChars;
-      wordCountElement.textContent = totalWords;
-    }
-
-    // --- Export Note System ---
-    function exportNoteAsText() {
-      if (!state.activeId) return;
-
-      const activeNote = state.notes.find(n => n.id === state.activeId);
-      if (!activeNote) return;
-
-      const title = activeNote.title.trim() || 'Untitled Note';
-      const body = activeNote.body || '';
-
-      // Clean file naming pattern for filesystem
-      const sanitizedFilename = title
+      const note = state.notes.find(n => n.id === state.activeId);
+      if (!note) return;
+      
+      const title = note.title.trim() || 'Untitled Note';
+      const fileData = `${title}\n${'='.repeat(title.length)}\n\nCategory: ${note.category}\nTags: ${note.tags || 'none'}\n\n${note.body || ''}`;
+      
+      const filename = title
         .toLowerCase()
         .replace(/[^a-z0-9]/gi, '_')
         .replace(/_{2,}/g, '_')
-        .replace(/(^_|_$)/g, '') || 'untitled_note';
+        .trim() + '.txt';
 
-      const fileData = `${title}\n${'='.repeat(title.length)}\n\n${body}`;
-      
       try {
         const blob = new Blob([fileData], { type: 'text/plain;charset=utf-8' });
-        const objectUrl = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
         
-        const downloadLink = document.createElement('a');
-        downloadLink.href = objectUrl;
-        downloadLink.download = `${sanitizedFilename}.txt`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
         
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        
-        document.body.removeChild(downloadLink);
-        URL.revokeObjectURL(objectUrl);
-
-        showToast(`Exported "${title}" as TXT`);
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Exported note successfully');
       } catch (err) {
-        console.error('File compilation error:', err);
-        showToast('Export failed. Please check permissions.', 'error');
+        console.error('File generation failure:', err);
+        showToast('Export failed.');
       }
     }
 
-    // --- Sidebar DOM Renderer ---
+    // Notes list renderer
     function renderNotesList() {
       notesListContainer.innerHTML = '';
       
-      const filteredNotes = state.notes.filter(note => {
-        const query = state.searchQuery.toLowerCase();
-        return (note.title || '').toLowerCase().includes(query) || 
-               (note.body || '').toLowerCase().includes(query);
+      const filtered = state.notes.filter(note => {
+        // 1. Search Query filter (checks title, body, and tags)
+        const q = state.searchQuery.toLowerCase();
+        const matchesSearch = (note.title || '').toLowerCase().includes(q) || 
+                              (note.body || '').toLowerCase().includes(q) ||
+                              (note.tags || '').toLowerCase().includes(q);
+        
+        // 2. Folder Category Filter
+        const matchesCategory = state.activeCategoryFilter === 'all' || 
+                                (note.category || 'uncategorized') === state.activeCategoryFilter;
+        
+        return matchesSearch && matchesCategory;
       });
 
-      if (filteredNotes.length === 0) {
-        // Show empty sidebar representation depending on context
-        const isSearching = state.searchQuery.length > 0;
+      if (filtered.length === 0) {
         notesListContainer.innerHTML = `
-          <div class="flex flex-col items-center justify-center py-10 px-4 text-center">
-            <div class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-full text-slate-400 dark:text-slate-600 mb-3">
-              <i data-lucide="${isSearching ? 'search-code' : 'sticky-note'}" class="w-6 h-6"></i>
-            </div>
-            <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">
-              ${isSearching ? 'No match results found' : 'Your workspace is empty'}
-            </p>
-            <p class="text-xs text-slate-400 dark:text-slate-600 mt-1">
-              ${isSearching ? 'Try another keyword query' : 'Create a note to fill this space'}
-            </p>
+          <div class="text-center py-10 text-slate-400 dark:text-slate-600 text-sm select-none">
+            <p>No notes found</p>
           </div>
         `;
-        lucide.createIcons();
         return;
       }
 
-      filteredNotes.forEach(note => {
+      filtered.forEach(note => {
         const isActive = note.id === state.activeId;
-        const displayTitle = note.title.trim() || 'Untitled Note';
-        const snippet = getContentSnippet(note.body);
-        const timeDisplay = formatTime(note.updatedAt);
+        const category = note.category || 'uncategorized';
+        const cardStyle = categoryColors[category] || categoryColors.uncategorized;
+        
+        // Convert tags string to list array badges
+        const tagList = note.tags 
+          ? note.tags.split(',').map(t => t.trim()).filter(t => t.length > 0) 
+          : [];
 
-        // Generate note card item elements dynamically
         const card = document.createElement('div');
-        card.setAttribute('data-note-id', note.id);
-        card.className = `group relative p-4 rounded-xl border cursor-pointer select-none transition-all duration-200 animate-fade-in ${
+        card.setAttribute('data-id', note.id);
+        
+        card.className = `p-3.5 rounded-lg border cursor-pointer transition-all relative group select-none ${cardStyle.border} ${cardStyle.bg} ${
           isActive 
-            ? 'bg-brand-50/75 dark:bg-brand-950/30 border-brand-200 dark:border-brand-900/60 shadow-sm ring-1 ring-brand-500/20' 
-            : 'bg-white dark:bg-slate-900/40 border-slate-100 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800/40 hover:border-slate-200 dark:hover:border-slate-700/60 shadow-sm'
+            ? 'bg-indigo-50/70 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900/50 shadow-sm' 
+            : 'bg-white border-slate-150 dark:bg-slate-900/40 dark:border-slate-800/80 dark:hover:border-slate-700'
         }`;
 
+        let tagsBadgesHtml = '';
+        if (tagList.length > 0) {
+          tagsBadgesHtml = `<div class="flex flex-wrap gap-1 mt-1.5">` + 
+            tagList.map(tag => `<span class="px-1.5 py-0.5 rounded bg-slate-100/80 dark:bg-slate-800/70 text-[9px] text-slate-500 dark:text-slate-450 font-medium font-mono border border-slate-200/20">#${tag}</span>`).join('') +
+            `</div>`;
+        }
+
         card.innerHTML = `
-          <div class="flex flex-col gap-1 pr-6">
-            <h4 class="preview-title font-bold text-sm truncate transition-colors ${
-              isActive ? 'text-brand-700 dark:text-brand-300' : 'text-slate-800 dark:text-slate-200'
-            }">${displayTitle}</h4>
-            <p class="preview-snippet text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">${snippet}</p>
-            <div class="flex items-center gap-1 mt-2 text-[10px] font-semibold text-slate-400 dark:text-slate-500">
-              <i data-lucide="clock" class="w-3 h-3"></i>
-              <span class="preview-time">${timeDisplay}</span>
-            </div>
+          <div class="pr-8">
+            <h4 class="card-title font-semibold text-sm truncate ${
+              isActive ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-200'
+            }">${note.title.trim() || 'Untitled Note'}</h4>
+            <p class="card-preview text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">${getSnippet(note.body)}</p>
+            ${tagsBadgesHtml}
+            <span class="card-time text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-2">${formatTime(note.updatedAt)}</span>
           </div>
-          <!-- Delete Hover Button Action -->
-          <button 
-            class="delete-item-btn absolute right-3.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-200 focus:opacity-100 focus:outline-none"
-            aria-label="Delete this note"
-            title="Delete note"
-          >
+          <!-- Delete button (visible always on mobile/tablet, hover-only on desktop) -->
+          <button class="btn-del-item absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" title="Delete Note">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
           </button>
         `;
 
-        // Event hooks
         card.addEventListener('click', () => selectNote(note.id));
-        
-        const delBtn = card.querySelector('.delete-item-btn');
-        delBtn.addEventListener('click', (e) => deleteNote(note.id, e));
+        card.querySelector('.btn-del-item').addEventListener('click', (e) => deleteNote(note.id, e));
 
         notesListContainer.appendChild(card);
       });
@@ -664,89 +745,94 @@
       lucide.createIcons();
     }
 
-    // --- Responsive Mobile Sidebar Controls ---
-    function openMobileSidebar() {
-      sidebar.classList.remove('-translate-x-full');
-      sidebarOverlay.classList.remove('hidden');
-      setTimeout(() => {
-        sidebarOverlay.classList.add('opacity-100');
-      }, 50);
-      state.isSidebarOpen = true;
-    }
+    // Sidebar Folder Filtering Actions
+    function handleCategoryFilterClick(event) {
+      const button = event.target.closest('[data-filter]');
+      if (!button) return;
 
-    function closeMobileSidebar() {
-      sidebar.classList.add('-translate-x-full');
-      sidebarOverlay.classList.remove('opacity-100');
-      setTimeout(() => {
-        sidebarOverlay.classList.add('hidden');
-      }, 300);
-      state.isSidebarOpen = false;
-    }
+      state.activeCategoryFilter = button.getAttribute('data-filter');
 
-    function toggleMobileSidebar() {
-      if (state.isSidebarOpen) {
-        closeMobileSidebar();
-      } else {
-        openMobileSidebar();
-      }
-    }
-
-    // --- Application Initialization Setup ---
-    function initializeApplication() {
-      // 1. Initial Load of Storage
-      loadFromLocalStorage();
-
-      // 2. Setup Theme values
-      initTheme();
-
-      // 3. Populate default workspace if completely clean
-      if (state.notes.length === 0) {
-        state.notes = [
-          {
-            id: 'default_note_1',
-            title: 'Welcome to NovaNote 🚀',
-            body: `NovaNote is a clean, distraction-free modern notepad application. It runs completely client-side in your browser.\n\n✨ Core Features:\n- Fully responsive layout (toggles elegantly on mobile devices)\n- Responsive search filters to find specific words or titles\n- Built-in character and word counting systems\n- Auto-saves instantly directly to your browser's LocalStorage\n- Seamless light/dark mode toggling\n- Quick .txt file downloading / exporting\n\nStart typing and feel the smoothness!`,
-            updatedAt: Date.now()
-          }
-        ];
-        state.activeId = 'default_note_1';
-        saveToLocalStorage();
-      }
-
-      // 4. Render Layout elements
-      renderNotesList();
-      loadActiveNoteToEditor();
-
-      // 5. Setup Action Listeners
-      
-      // Editor live saving
-      noteTitleInput.addEventListener('input', handleEditorInput);
-      noteBodyTextarea.addEventListener('input', handleEditorInput);
-
-      // Create new note triggers
-      document.getElementById('btn-new-note').addEventListener('click', createNewNote);
-      document.getElementById('mobile-new-note').addEventListener('click', createNewNote);
-      document.getElementById('btn-empty-new-note').addEventListener('click', createNewNote);
-
-      // Deletes & Exports
-      document.getElementById('btn-delete').addEventListener('click', () => {
-        if (state.activeId) {
-          deleteNote(state.activeId);
+      // Update styling states of buttons
+      const buttons = categoryFiltersRow.querySelectorAll('[data-filter]');
+      buttons.forEach(btn => {
+        const isSelected = btn.getAttribute('data-filter') === state.activeCategoryFilter;
+        if (isSelected) {
+          btn.className = "px-3 py-1 text-xs font-semibold rounded-full bg-indigo-600 text-white shadow-sm shrink-0 transition-all focus:outline-none";
+        } else {
+          btn.className = "px-3 py-1 text-xs font-medium rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 shrink-0 transition-all hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none";
         }
       });
-      document.getElementById('btn-export').addEventListener('click', exportNoteAsText);
 
-      // Theme toggle
+      // Filter notes list
+      renderNotesList();
+    }
+
+    // App Bootstrapper
+    function initApp() {
+      loadNotes();
+      initTheme();
+
+      // Setup default welcome note with styled markdown format on empty database
+      if (state.notes.length === 0) {
+        state.notes.push({
+          id: 'note_welcome',
+          title: 'Welcome to Simple Note 🚀',
+          body: '# Simple Note Guide\nThis is a lightweight and clean notepad web application.\n\n## 📝 Markdown Support\nYou can write standard markdown in Edit mode and preview it inside the **Preview** tab. We support:\n- **Bold text** and *italic emphasizes*\n- Bullet lists and numbered selections\n- Inline `code snippets` and blocks:\n```\nconst notepad = "Simple Note";\nconsole.log(notepad);\n```\n- Blockquotes for calling out instructions:\n> Simple Note runs offline-first and stores files locally in your browser!\n\n## 📂 Folder Category Filters\nUse the dropdown select row below the title to set category folders:\n- **Work** (subtle blue cards)\n- **Personal** (subtle green cards)\n- **Ideas** (subtle purple cards)\n- **Todo** (subtle amber cards)\n\nYou can click on the category pills in the sidebar header to filter your list immediately!\n\n## 🏷️ Custom Note Tagging\nWrite tags in the tags input box separated by commas. Tag badges will display under note previews in the sidebar.',
+          category: 'ideas',
+          tags: 'welcome, markdown, tutorial',
+          updatedAt: Date.now()
+        });
+        state.activeId = 'note_welcome';
+        saveNotes();
+      }
+
+      renderNotesList();
+      loadActiveNote();
+
+      // Typing Listeners
+      noteTitleInput.addEventListener('input', handleTypingInput);
+      noteBodyTextarea.addEventListener('input', handleTypingInput);
+      
+      // Metadata change listeners
+      noteCategorySelect.addEventListener('change', handleMetadataChange);
+      noteTagsInput.addEventListener('input', handleMetadataChange);
+
+      // Markdown switches listeners
+      btnModeEdit.addEventListener('click', () => setEditorMode(false));
+      btnModePreview.addEventListener('click', () => setEditorMode(true));
+
+      // Buttons Listeners
+      document.getElementById('btn-new-note').addEventListener('click', createNote);
+      document.getElementById('btn-empty-new-note').addEventListener('click', createNote);
+      document.getElementById('btn-mobile-new').addEventListener('click', createNote);
+      
+      document.getElementById('btn-delete').addEventListener('click', () => {
+        if (state.activeId) deleteNote(state.activeId);
+      });
+      document.getElementById('btn-export').addEventListener('click', exportNote);
       document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+      
+      // Mobile Back button navigation trigger
+      document.getElementById('btn-back').addEventListener('click', () => {
+        state.activeId = null;
+        saveNotes();
+        renderNotesList();
+        loadActiveNote();
+      });
 
-      // Mobile controls
-      mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
-      sidebarOverlay.addEventListener('click', closeMobileSidebar);
+      // Empty State Browse notes trigger (opens list on mobile)
+      document.getElementById('btn-empty-browse').addEventListener('click', () => {
+        state.activeId = null;
+        loadActiveNote();
+      });
 
-      // Realtime note queries filtering
+      // Category filter container triggers
+      categoryFiltersRow.addEventListener('click', handleCategoryFilterClick);
+
+      // Search Inputs
       searchInput.addEventListener('input', () => {
         state.searchQuery = searchInput.value;
-        if (state.searchQuery.length > 0) {
+        if (state.searchQuery) {
           btnClearSearch.classList.remove('hidden');
         } else {
           btnClearSearch.classList.add('hidden');
@@ -754,7 +840,6 @@
         renderNotesList();
       });
 
-      // Clear search control
       btnClearSearch.addEventListener('click', () => {
         searchInput.value = '';
         state.searchQuery = '';
@@ -763,12 +848,14 @@
         searchInput.focus();
       });
 
-      // Initialize icons
+      // Window resize layout update triggers
+      window.addEventListener('resize', updateLayoutVisibility);
+
+      // Render vector icons
       lucide.createIcons();
     }
 
-    // Execute application bootstrap on content loaded
-    window.addEventListener('DOMContentLoaded', initializeApplication);
+    window.addEventListener('DOMContentLoaded', initApp);
   </script>
 </body>
 </html>
